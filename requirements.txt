@@ -1,0 +1,24 @@
+
+# Requirements for mediaplayer
+# Use `pip install -r requirements.txt` to install.
+
+# Web framework
+Flask>=2.0
+
+# WSGI server for production
+gunicorn>=20.0
+
+# MySQL client library used by MySql.py and other DB scripts
+pymysql>=1.0
+
+# Audio/Video metadata inspection (optional but used in notes)
+pymediainfo>=5.0
+
+# Audio metadata library used by read_audio_to_mysql.py
+mutagen>=1.45
+
+# Cryptography utilities used by functions.encrypt_it/decrypt_it
+cryptography>=3.4
+
+# (Optional) developer/test utilities that may be imported in helper scripts
+# You can add more packages here if you use additional tools.

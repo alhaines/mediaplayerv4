@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Media Player</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Select a Table</h1>
+    <form method="POST">
+        <select name="table_name" style="font-family: 'Comic Sans MS'; font-size: 40px;">
+            <option value="">Select a table</option>
+            {% for table in tables %}
+                <option value="{{ table }}">{{ table }}</option>
+            {% endfor %}
+        </select><br><br><br><br>
+        <button type="submit" style="font-family: 'Comic Sans MS'; font-size: 40px;">Select Table</button>
+    </form>
+</body>
+</html>

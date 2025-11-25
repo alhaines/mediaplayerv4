@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Select Video</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+
+</head>
+<body>
+    <h1>Select a Video from {{ table_name }}</h1>
+    <form method="POST">
+        <select name="video_id" style="font-family: 'Comic Sans MS'; font-size: 45px;>
+            <option value="">Select a video</option>
+            {% for video in video_list %}
+                <option value="{{ video[0] }}">{{ video[1] }}</option>
+            {% endfor %}
+        </select><br> <br> <br><br>
+        <input type="submit" value="Play" style="font-family: 'Comic Sans MS'; font-size: 55px; padding: 10px 20px; background-color: #3498db; color: #fff; border: none; cursor: pointer;">
+    </form>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Media Player</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Media Library</h1>
+        <p class="home-button-container"><a href="https://alhaines.org/" class="button">Home Page</a></p>
+        <hr>
+
+        <div id="resume-container">
+            <h2>Continue Watching/Listening</h2>
+            {% if resume_items %}
+                <select id="resume-select" onchange="window.location.href=this.value;">
+                    <option value="">-- Choose where you left off --</option>
+                    {% for item in resume_items %}
+                        <option value="{{ url_for('player', table_name=item.category, item_id=item.id) }}#t={{ item.resume_position|int }}">
+                            {% if item.album %}
+                                {{ item.album }}: {{ item.title }}
+                            {% else %}
+                                {{ item.title }}
+                            {% endif %}
+                            ({{ item.category }})
+                        </option>
+                    {% endfor %}
+                </select>
+            {% else %}
+                <p>No recently played items.</p>
+            {% endif %}
+        </div>
+        <hr>
+
+        <h2>Browse Full Library</h2>
+        <div>
+            <label for="category-select">Select a Category:</label>
+            <select id="category-select">
+                <option value="">-- Choose a Category --</option>
+                {% for category in categories %}
+                    <option value="{{ category }}">{{ category.replace('_', ' ').title() }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div id="folder-container" style="display: none;">
+            <label for="folder-select">Select Album/Folder:</label>
+            <select id="folder-select">
+                <option value="">-- Choose an Album/Folder --</option>
+            </select>
+        </div>
+
+        <div id="track-container" style="display: none;">
+            <label for="track-select">Select Track/Video:</label>
+            <select id="track-select">
+                <option value="">-- Choose --</option>
+            </select>
+        </div>
+
+        <hr>
+        <div id="search-section">
+            <h2>Search Within a Category</h2>
+            <div>
+                <label for="search-category-select">Category:</label>
+                <select id="search-category-select">
+                    <option value="">-- Choose a Category --</option>
+                    {% for category in categories %}
+                        <option value="{{ category }}">{{ category.replace('_', ' ').title() }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="search-input-container" style="display: none; margin-top: 8px;">
+                <label for="search-input">Search string:</label>
+                <input type="text" id="search-input" placeholder="Enter title or part of title">
+                <button id="search-button">Search</button>
+                <span id="search-status" style="margin-left:8px;"></span>
+            </div>
+            <div id="search-results-container" style="display: none; margin-top: 8px;">
+                <label for="search-results-select">Results:</label>
+                <select id="search-results-select">
+                    <option value="">-- Choose a result --</option>
+                </select>
+                <span id="search-results-count" style="margin-left:8px;"></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const videoTables = ["movies", "disney_movies", "horror_movies", "xxx", "musicvids", "teaching_co", "tv_shows", "James_Bond", "Cartoons", "dr_who_full", "dr_who_2005", "dr_who_2023", "dr_who_classic", "dr_who_specials", "programming", "Stargate", "Star_Trek", "Star_Wars"];
+
+            $('#category-select').change(function() {
+                const category = $(this).val();
+                $('#folder-container, #track-container').hide();
+                if (category) {
+                    let endpoint = videoTables.includes(category) ? '/get_folders/' + category : '/get_albums/' + category;
+                    $.getJSON(endpoint, function(items) {
+                        const folderSelect = $('#folder-select').empty().append('<option value="">-- Choose --</option>');
+                        $.each(items, function(i, item) {
+                            folderSelect.append($('<option>').val(item).text(item));
+                        });
+                        $('#folder-container').show();
+                    });
+                }
+            });
+
+            $('#folder-select').change(function() {
+                const category = $('#category-select').val();
+                const folder = $(this).val();
+                $('#track-container').hide();
+                if (folder) {
+                    let endpoint = videoTables.includes(category) ? '/get_videos/' + category + '/' + encodeURIComponent(folder) : '/get_tracks/' + category + '/' + encodeURIComponent(folder);
+                    $.getJSON(endpoint, function(items) {
+                        const trackSelect = $('#track-select').empty().append('<option value="">-- Choose --</option>');
+                        $.each(items, function(i, item) {
+                            const option = $('<option>').val(item.id).text(item.title);
+                            if (item.resume_position) {
+                                option.data('resume', item.resume_position);
+                            }
+                            trackSelect.append(option);
+                        });
+                        $('#track-container').show();
+                    });
+                }
+            });
+
+            $('#track-select').change(function() {
+                const category = $('#category-select').val();
+                const trackId = $(this).val();
+                const resumeTime = $(this).find('option:selected').data('resume') || 0;
+                if (trackId) {
+                    window.location.href = `/player/${category}/${trackId}#t=${resumeTime}`;
+                }
+            });
+
+            // --- Search-by-category functionality ---
+            $('#search-category-select').change(function() {
+                const category = $(this).val();
+                $('#search-status').text('');
+                $('#search-input').val('');
+                if (category) {
+                    $('#search-input-container').show();
+                    $('#search-input').focus();
+                } else {
+                    $('#search-input-container').hide();
+                }
+            });
+
+            async function performSearch(category, query) {
+                const q = (query || '').trim().toLowerCase();
+                if (!q) { return {items: []}; }
+                const matches = [];
+                // first get the list of folders/albums for this category
+                let foldersEndpoint = videoTables.includes(category) ? '/get_folders/' + category : '/get_albums/' + category;
+                try {
+                    const folders = await $.getJSON(foldersEndpoint);
+                    for (let i = 0; i < folders.length; i++) {
+                        const folder = folders[i];
+                        let itemsEndpoint = videoTables.includes(category) ? '/get_videos/' + category + '/' + encodeURIComponent(folder) : '/get_tracks/' + category + '/' + encodeURIComponent(folder);
+                        const items = await $.getJSON(itemsEndpoint);
+                        for (let j = 0; j < items.length; j++) {
+                            const item = items[j];
+                            const title = (item.title || '').toLowerCase();
+                            if (title.indexOf(q) !== -1) {
+                                // include folder name to display useful label
+                                item._folder = folder;
+                                matches.push(item);
+                            }
+                        }
+                    }
+                    return {items: matches};
+                } catch (err) {
+                    return {items: [], error: err};
+                }
+            }
+
+            $('#search-button').click(async function(e) {
+                e.preventDefault();
+                const category = $('#search-category-select').val();
+                const query = $('#search-input').val();
+                if (!category) {
+                    $('#search-status').text('Please choose a category.');
+                    return;
+                }
+                if (!query || !query.trim()) {
+                    $('#search-status').text('Please enter a search string.');
+                    return;
+                }
+
+                $('#search-status').text('Searching...');
+                $('#search-results-container').hide();
+                $('#search-results-select').empty().append('<option value="">-- Choose a result --</option>');
+                $(this).prop('disabled', true);
+                const result = await performSearch(category, query);
+                $(this).prop('disabled', false);
+                const items = (result && result.items) ? result.items : [];
+                if (items.length === 0) {
+                    $('#search-status').text('No matching item found.');
+                    $('#search-results-count').text('');
+                } else if (items.length === 1) {
+                    $('#search-status').text('One match found — redirecting...');
+                    const it = items[0];
+                    const resumeTime = it.resume_position || 0;
+                    window.location.href = `/player/${category}/${it.id}#t=${resumeTime}`;
+                } else {
+                    $('#search-status').text(items.length + ' matches found. Please choose.');
+                    $('#search-results-count').text('(' + items.length + ')');
+                    const sel = $('#search-results-select');
+                    sel.append($.map(items, function(it) {
+                        const labelParts = [];
+                        if (it._folder) labelParts.push(it._folder);
+                        if (it.album) labelParts.push(it.album);
+                        labelParts.push(it.title || it.id);
+                        const label = labelParts.join(' — ');
+                        return $('<option>').val(it.id).data('resume', it.resume_position || 0).text(label);
+                    }));
+                    $('#search-results-container').show();
+                }
+            });
+
+            // when the user picks a result from the results dropdown
+            $('#search-results-select').change(function() {
+                const category = $('#search-category-select').val();
+                const trackId = $(this).val();
+                const resumeTime = $(this).find('option:selected').data('resume') || 0;
+                if (trackId) {
+                    window.location.href = `/player/${category}/${trackId}#t=${resumeTime}`;
+                }
+            });
+
+            window.addEventListener('pageshow', function(event) {
+                if (event.persisted) { window.location.reload(); }
+            }, false);
+        });
+    </script>
+</body>
+</html>

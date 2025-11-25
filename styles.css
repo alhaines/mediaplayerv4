@@ -1,0 +1,203 @@
+/*
+ * styles.css
+ *
+ * Copyright 2025 AL Haines
+ *
+ * Contains all styles for the Media Player app home page.
+ */
+body {
+    background-color: lightblue;
+    font-family: sans-serif;
+    padding: 20px;
+    font-size: 16px;
+}
+.container {
+    max-width: 900px;
+    margin: auto;
+    background: lightblue; /* The main container has the white background */
+    padding: 20px;
+    border-radius: 8px;
+}
+h1.page-title, h1, h2 {
+    color: navy;
+    text-align: center;
+}
+a {
+    text-decoration: none;
+    color: #0056b3;
+    font-weight: bold;
+}
+hr {
+    margin: 20px 0;
+}
+div {
+    text-align: center;
+    margin-bottom: 15px;
+}
+select {
+    font-size: 1em;
+    padding: 5px;
+}
+.main-menu-link {
+    display: block;
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+/* --- NEW: Styles for the resume list to match our template --- */
+.resume-list {
+    text-align: left; /* Align text to the left inside the list */
+    list-style-type: none; /* Remove bullet points */
+    padding: 0;
+}
+.resume-item {
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+}
+.resume-item a {
+    display: block; /* Make the whole area clickable */
+}
+
+/* Styles for the new grid layout on the home page */
+.list-section h2 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 12px;
+    color: navy;
+}
+.item-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(1, 1fr);
+}
+@media (min-width: 640px) {
+    .item-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (min-width: 1024px) {
+    .item-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+.item-card {
+    background-color: #f0f0f0;
+    padding: 16px;
+    border-radius: 8px;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    border: 1px solid #ccc;
+}
+.item-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.3);
+}
+.item-card h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: navy;
+}
+.item-card p {
+    color: #555;
+}
+
+/* Skip button styles */
+.skip-button {
+    display: block;
+    margin: 10px auto;
+    padding: 10px 20px;
+    background-color: #0056b3;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s;
+}
+
+.skip-button:hover {
+    background-color: #003d7a;
+}
+
+.skip-button:active {
+    background-color: #002a54;
+}
+
+/* ===== CONTROL PANEL STYLES ===== */
+.control-panel {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    flex-wrap: wrap;
+}
+
+.control-btn {
+    padding: 12px 24px;
+    font-size: 1em;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: white;
+    background-color: #7c3aed; /* Purple */
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+
+.control-btn:hover {
+    background-color: #6d28d9; /* Darker purple */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.5);
+}
+
+.control-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(124, 58, 237, 0.3);
+}
+
+.control-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Optional: Different shades for visual distinction */
+.control-btn-next {
+    background-color: #8b5cf6; /* Vibrant purple */
+}
+
+.control-btn-next:hover {
+    background-color: #7c3aed;
+}
+
+.control-btn-reset {
+    background-color: #a855f7; /* Lighter purple */
+}
+
+.control-btn-reset:hover {
+    background-color: #9333ea;
+}
+
+.control-btn-random {
+    background-color: #d946ef; /* Magenta-purple */
+}
+
+.control-btn-random:hover {
+    background-color: #c026d3;
+}
+
+.control-btn-fullscreen {
+    background-color: #06b6d4; /* Cyan */
+}
+
+.control-btn-fullscreen:hover {
+    background-color: #0891b2;
+}

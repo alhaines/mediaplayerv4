@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ item.album or item.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="main-container">
+        <div class="nav-link">
+            <a href="{{ url_for('index') }}">« Back to Library Browser</a>
+        </div>
+        <h1>{{ item.album or "Player" }}</h1>
+        {% if playlist %}
+            <h4>Now playing chapter {{ current_track_index + 1 }} of {{ playlist|length }}</h4>
+        {% endif %}
+        <p><strong>File:</strong> {{ item.title }}</p>
+        <div id="media-player-container">
+            {% if is_audio %}
+                <audio controls autoplay id="media-player">
+                    <source src="{{ url_for('stream', table_name=category, item_id=item.id) }}" type="audio/mpeg">
+                </audio>
+            {% else %}
+                <video controls autoplay id="media-player" width="100%">
+                    <source src="{{ url_for('stream', table_name=category, item_id=item.id) }}" type="video/mp4">
+                </video>
+            {% endif %}
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <button id="btn-next" class="control-btn control-btn-next" title="Skip to next video and reset resume position (Press N)">
+                ⏭️ Next
+            </button>
+            <button id="btn-reset" class="control-btn control-btn-reset" title="Reset playback to the beginning (Press R)">
+                🔄 Reset
+            </button>
+            <button id="btn-random" class="control-btn control-btn-random" title="Play a random video from the list (Press X)">
+                🎲 Random
+            </button>
+            <button id="btn-fullscreen" class="control-btn control-btn-fullscreen" title="Toggle fullscreen (Press `)">
+                🖥️ Fullscreen
+            </button>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const mediaPlayer = document.getElementById('media-player');
+            const playlist = {{ playlist|tojson }};
+            const currentTrackIndex = {{ current_track_index }};
+            const category = "{{ category }}";
+            const currentItemId = {{ item.id }};
+
+            // Flag to ensure fullscreen only triggered once
+            let fullscreenRequested = false;
+
+            mediaPlayer.addEventListener('loadedmetadata', function() {
+                // Get the resume time from the URL hash
+                const hash = window.location.hash.substring(1);
+                const params = new URLSearchParams(hash);
+                const startTime = params.get('t');
+
+                if (startTime && !isNaN(parseFloat(startTime))) {
+                    this.currentTime = parseFloat(startTime);
+                }
+            });
+
+            // Request fullscreen when video starts playing
+            mediaPlayer.addEventListener('play', function() {
+                if (mediaPlayer.tagName === 'VIDEO' && !fullscreenRequested) {
+                    fullscreenRequested = true;
+                    const container = document.getElementById('media-player-container');
+                    
+                    // Try fullscreen on the video element first
+                    if (mediaPlayer.requestFullscreen) {
+                        mediaPlayer.requestFullscreen().catch(err => {
+                            console.log('Video fullscreen failed, trying container:', err);
+                            // Fallback: try fullscreen on the container
+                            if (container && container.requestFullscreen) {
+                                container.requestFullscreen().catch(err2 => {
+                                    console.log('Container fullscreen failed:', err2);
+                                });
+                            }
+                        });
+                    } else if (container && container.requestFullscreen) {
+                        // Try container if video doesn't support it
+                        container.requestFullscreen().catch(err => {
+                            console.log('Container fullscreen failed:', err);
+                        });
+                    }
+                }
+            });
+
+            function savePosition() {
+                if (!mediaPlayer.paused && mediaPlayer.currentTime > 0) {
+                    $.ajax({
+                        url: "{{ url_for('update_resume', table_name=category, item_id=item.id) }}",
+                        type: 'POST',
+                        data: {
+                            position: mediaPlayer.currentTime,
+                            duration: mediaPlayer.duration
+                        }
+                    });
+                }
+            }
+            setInterval(savePosition, 10000);
+
+            mediaPlayer.addEventListener('ended', function() {
+                // Clear the resume position first
+                $.post("{{ url_for('clear_resume', table_name=category, item_id=item.id) }}", function() {
+                    // Then check if there's a next track in the playlist
+                    if (playlist && currentTrackIndex > -1 && currentTrackIndex < playlist.length - 1) {
+                        const nextTrack = playlist[currentTrackIndex + 1];
+                        // Redirect to the next track in the playlist
+                        window.location.href = '/player/' + category + '/' + nextTrack.id;
+                    } else {
+                        // If no next track, redirect to the index page
+                        window.location.href = "{{ url_for('index') }}";
+                    }
+                });
+            });
+
+            // ===== CONTROL PANEL BUTTON HANDLERS =====
+
+            // Function to handle NEXT action
+            function goToNext() {
+                if (playlist && currentTrackIndex > -1 && currentTrackIndex < playlist.length - 1) {
+                    // Clear the resume position first
+                    $.post("{{ url_for('clear_resume', table_name=category, item_id=item.id) }}", function() {
+                        const nextTrack = playlist[currentTrackIndex + 1];
+                        // Redirect to the next track in the playlist
+                        window.location.href = '/player/' + category + '/' + nextTrack.id;
+                    });
+                } else {
+                    alert("No next video available in this playlist.");
+                }
+            }
+
+            // Function to handle RESET action
+            function resetVideo() {
+                mediaPlayer.currentTime = 0;
+                $.post("{{ url_for('clear_resume', table_name=category, item_id=item.id) }}", function() {
+                    // Resume position cleared, video will start from beginning
+                });
+            }
+
+            // Function to handle RANDOM action
+            function playRandom() {
+                if (playlist && playlist.length > 0) {
+                    // Pick a random index
+                    const randomIndex = Math.floor(Math.random() * playlist.length);
+                    const randomTrack = playlist[randomIndex];
+                    
+                    // Clear the resume position first
+                    $.post("{{ url_for('clear_resume', table_name=category, item_id=item.id) }}", function() {
+                        // Redirect to the random track
+                        window.location.href = '/player/' + category + '/' + randomTrack.id;
+                    });
+                } else {
+                    alert("No videos available in this playlist.");
+                }
+            }
+
+            // NEXT button click handler
+            $('#btn-next').click(goToNext);
+
+            // RESET button click handler
+            $('#btn-reset').click(resetVideo);
+
+            // RANDOM button click handler
+            $('#btn-random').click(playRandom);
+
+            // FULLSCREEN button click handler
+            $('#btn-fullscreen').click(toggleFullscreen);
+
+            // ===== KEYBOARD SHORTCUTS =====
+            // N or n: Next video
+            // R or r: Reset video to start
+            // X or x: Random video
+            // ` (backtick): Toggle fullscreen
+            document.addEventListener('keydown', function(event) {
+                const key = event.key.toLowerCase();
+
+                // Only trigger hotkeys if not typing in an input field
+                if (document.activeElement.tagName !== 'INPUT' && 
+                    document.activeElement.tagName !== 'TEXTAREA') {
+                    
+                    if (key === 'n') {
+                        event.preventDefault();
+                        goToNext();
+                    } else if (key === 'r') {
+                        event.preventDefault();
+                        resetVideo();
+                    } else if (key === 'x') {
+                        event.preventDefault();
+                        playRandom();
+                    } else if (key === '`') {
+                        event.preventDefault();
+                        toggleFullscreen();
+                    }
+                }
+            });
+
+            // Function to toggle fullscreen
+            function toggleFullscreen() {
+                const container = document.getElementById('media-player-container');
+                
+                // Check if already in fullscreen
+                if (document.fullscreenElement) {
+                    // Exit fullscreen
+                    document.exitFullscreen().catch(err => {
+                        console.log('Exit fullscreen failed:', err);
+                    });
+                } else {
+                    // Enter fullscreen on the container
+                    if (container.requestFullscreen) {
+                        container.requestFullscreen().catch(err => {
+                            console.log('Fullscreen request failed:', err);
+                            // Try on the video element as fallback
+                            if (mediaPlayer.requestFullscreen) {
+                                mediaPlayer.requestFullscreen().catch(err2 => {
+                                    console.log('Video fullscreen failed:', err2);
+                                });
+                            }
+                        });
+                    } else if (mediaPlayer.requestFullscreen) {
+                        mediaPlayer.requestFullscreen().catch(err => {
+                            console.log('Video fullscreen failed:', err);
+                        });
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
