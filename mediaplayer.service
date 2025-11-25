@@ -1,0 +1,34 @@
+# /etc/systemd/system/mediaplayer.service
+#
+# This service runs the 'mediaplayer' Flask app using the Gunicorn
+# production WSGI server.
+
+[Unit]
+Description=Gunicorn instance to serve the mediaplayer Flask app
+After=network.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Run as the 'al' user to have correct permissions
+User=al
+Group=al
+
+# Set the working directory to the project folder
+WorkingDirectory=/home/al/projects/mediaplayer
+
+# Set the PATH to include the 'py' Conda environment
+# This ensures gunicorn and all dependencies are found
+Environment="PATH=/home/al/miniconda3/envs/py/bin"
+
+# The command to start Gunicorn
+# --workers 3: A good starting number of processes
+# --bind 0.0.0.0:5051: Listen on port 5051 for all IPs
+# wsgi:app: Tells Gunicorn to run the 'app' object from the 'wsgi.py' file
+ExecStart=/home/al/miniconda3/envs/py/bin/gunicorn --workers 3 --bind 0.0.0.0:5050 wsgi:app
+
+# Restart the service if it ever fails
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
