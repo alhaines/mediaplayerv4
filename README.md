@@ -42,18 +42,3 @@ python app.py
 # or with gunicorn
 gunicorn -w 4 -b 0.0.0.0:8000 app:app
 ```
-
-Publishing a minimal repo
-
-Use `prepare_repo.sh` from the project root to gather only the needed files into a clean folder and initialize git there. Example:
-
-```bash
-./prepare_repo.sh mediaplayerv4 git@github.com:you/mediaplayerv4.git
-```
-
-The script will create the folder `mediaplayerv4`, copy files, make an initial commit, and push to the provided remote if given.
-
-Security
-
-- Do not commit `config.py` with real credentials. Use `config.sample.py` as a template and use environment variables in production where appropriate.
-- Exclude media files from the repo.
